@@ -3,6 +3,7 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
 kuklovsky_dokumentacia.docx
+pics/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

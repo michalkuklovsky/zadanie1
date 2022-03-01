@@ -290,16 +290,31 @@ class UDPHandler(socketserver.BaseRequestHandler):
             calls[callID] = {   
                 "participants": [],
                 "called_at": time.strftime("(%H:%M:%S)", time.localtime()),
-                "picked_up": None
+                "picked_up": None,
+                "video": False
             }
             calls[callID]["participants"].append(callFrom)
             calls[callID]["participants"].append(callTo)
-            logging.info("Call started\n                  call ID: %s\n                  from: %s\n                  to: %s" % (callID, callFrom, callTo))
+            logging.info("Call started\n                  call ID: %s\n                  from: %s\n                  to: %s\n" % (callID, callFrom, callTo))
         else:
             if callFrom not in calls[callID]["participants"]:
                 calls[callID]["participants"].append(callFrom)
+                logging.info("Call had new participant\n                  call ID: %s\n                  new: %s\n" % (callID, callFrom))
             if callTo not in calls[callID]["participants"]:
-                calls[callID]["participants"].append(callTo)        
+                calls[callID]["participants"].append(callTo)      
+                logging.info("Call had new participant\n                  call ID: %s\n                  new: %s\n" % (callID, callTo)) 
+            for line in logdata:
+                if "video" in line:
+                    if "video 0" in line and calls[callID]["video"]:
+                        calls[callID]["video_ended_at"] = time.strftime("(%H:%M:%S)", time.localtime())
+                        duration = datetime.strptime(calls[callID]["video_ended_at"], '(%H:%M:%S)') - datetime.strptime(calls[callID]["video_started_at"], '(%H:%M:%S)')
+                        logging.info("Video call ended\n                  call ID: %s\n                  video duration: %s\n" % (callID, str(duration)))
+                        calls[callID]["video"] = False
+                    else:
+                        calls[callID]["video_started_at"] = time.strftime("(%H:%M:%S)", time.localtime())
+                        logging.info("Video call started\n                  call ID: %s\n" % (callID)) 
+                        calls[callID]["video"] = True
+                    break
 
     def processInvite(self):
         origin = self.getOrigin()
@@ -374,7 +389,7 @@ class UDPHandler(socketserver.BaseRequestHandler):
                 if calls[id]["picked_up"] is None:
                     calls[id]["picked_up"] = True
                     calls[id]["picked_up_at"] = time.strftime("(%H:%M:%S)", time.localtime())
-                    logging.info("Call picked up by %s\n                  call ID: %s" % (self.getDestination(), id))
+                    logging.info("Call picked up by %s\n                  call ID: %s\n" % (self.getDestination(), id))
                 if "ended_at" in calls[id]:
                     if calls[id]["picked_up"] is True and calls[id]["ended_at"] is not None:
                         calls[id]["end_confirmed_at"] = time.strftime("(%H:%M:%S)", time.localtime())
@@ -392,8 +407,6 @@ class UDPHandler(socketserver.BaseRequestHandler):
                 if calls[id]["picked_up"] is None:
                     calls[id]["picked_up"] = False
                     logging.info("Call was declined by %s\n                  call ID: %s\n" % (self.getDestination(), id))
-                else:
-                    logging.info("Weird behaviour\n                  call ID: %s" % (id))
 
     def processCode(self):
         origin = self.getOrigin()
@@ -450,14 +463,18 @@ class UDPHandler(socketserver.BaseRequestHandler):
                 logging.error("request_uri %s" % request_uri)          
     
     def handle(self):
-        data = self.request[0].decode("utf-8")
-        self.data = data.split("\r\n")
-        self.socket = self.request[1]
-        request_uri = self.data[LINE]
-        if rx_request_uri.search(request_uri) or rx_code.search(request_uri):
-            self.processRequest()
-        else:
-            if len(data) > 4:
-                logging.warning("---\n>> server received [%d]:" % len(data))
-                hexdump(data,' ',16)
-                logging.warning("---")
+        try:
+            data = self.request[0].decode("utf-8")
+            self.data = data.split("\r\n")
+            self.socket = self.request[1]
+            request_uri = self.data[LINE]
+            if rx_request_uri.search(request_uri) or rx_code.search(request_uri):
+                self.processRequest()
+            else:
+                if len(data) > 4:
+                    logging.warning("---\n>> server received [%d]:" % len(data))
+                    hexdump(data,' ',16)
+                    logging.warning("---")
+        except:
+            pass
+            

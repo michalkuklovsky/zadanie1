@@ -22,6 +22,7 @@ if __name__ == "__main__":
     print("SIP Proxy - ip address:" + ipaddress)
 
     logging.basicConfig(format='%(asctime)s:%(levelname)s:%(message)s',filename='calls.log',level=logging.INFO,datefmt='%H:%M:%S')
+    logging.info("======================================================")
     logging.info("SIP Proxy started: " + time.strftime("%a, %d %b %Y %H:%M:%S ", time.localtime()))
     logging.info("SIP Proxy hostname: " + hostname)
     logging.info("SIP Proxy IP address: " + ipaddress + "\n")
@@ -30,4 +31,3 @@ if __name__ == "__main__":
     sipfullproxy.topvia = "Via: SIP/2.0/UDP %s:%d" % (ipaddress,PORT)
     server = socketserver.UDPServer((HOST, PORT), sipfullproxy.UDPHandler)
     server.serve_forever()
-    
